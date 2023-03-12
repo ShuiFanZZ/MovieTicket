@@ -2,6 +2,7 @@ import logo from './logo.svg';
 import './App.css';
 import React from 'react';
 import BookingForm from './BookingForm';
+import SeatMonitor from './SeatMonitor';
 
 function App() {
   // return (
@@ -24,7 +25,12 @@ function App() {
   // );
   return (
     <div>
-      <BookingForm />
+      <div>
+        <BookingForm />
+      </div>
+      <div>
+        <SeatMonitor/>  
+      </div>
     </div>
   );
 }

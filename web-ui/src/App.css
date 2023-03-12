@@ -47,6 +47,10 @@ h1 {
   text-align: center;
 }
 
+h4 {
+  text-align: center;
+}
+
 form {
   display: flex;
   flex-direction: column;
@@ -63,6 +67,7 @@ input[type="email"],
 select,
 input[type="number"],
 button[type="submit"] {
+  margin: 10px;
   padding: 10px;
   border: none;
   border-radius: 5px;
@@ -104,3 +109,67 @@ button[type="submit"]:hover {
   background-color: #f5f5f5;
   text-align: center;
 }
+
+div[type="theater"] {
+  border: 5px solid;
+  margin: auto;
+  width: 50%;
+  padding: 10px;
+  align-items: center;
+
+}
+
+div[type="seat"]{
+  flex: 0 0 32%;                       /* don't grow, don't shrink, width */
+  height: 50px;
+  width: 50px;
+  margin-bottom: 5px;
+  background-color: #999;
+  
+}
+
+div[type="seat-grid"] {
+  display: grid;
+  gap: 1px;
+  align-content: center;
+  justify-content: center;
+  grid-template-columns: repeat(5, 60px);
+}
+
+div[type="button_group"] {
+ 
+  margin: auto;
+  width: 50%;
+  padding: 10px;
+  text-align: center;
+
+}
+
+button[type="button"] {
+
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  font-size: 16px;
+  outline: none;
+
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+
+
+button[type="button"]:hover {
+  background-color: #0062cc;
+}
+
+button[id="cancel"]{
+  background-color: #f10c04;
+} 
+
+button[id="cancel"]:hover{
+  background-color: #580000;
+} 
