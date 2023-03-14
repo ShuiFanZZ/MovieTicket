@@ -10,9 +10,10 @@ import json
 import multiprocess
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
-
+from datetime import datetime
 CANCEL_PROB = 0.1
 
+random.seed(1)
 
 def receive_response(consumer):
     for message in consumer:
@@ -41,6 +42,7 @@ def ticket_booking(i, args):
         "mode": "seat_request"
     }
 
+    request_number = 1
     # Send request to Kafka
     producer.send(args.producer_topic, request, partition=i)
 
@@ -50,9 +52,10 @@ def ticket_booking(i, args):
     # If not enough seats, abort the booking
     if message["status"] == "fail":
         print(f"Not enough seats for user {i}")
-        return i, []
+        return i, [], request_number
      
     index = 0
+    
     while True:
         # Randomly select seats
         request["seat"] = random.sample(message["available_seats"], seat_number)
@@ -61,39 +64,56 @@ def ticket_booking(i, args):
         # Send request to Kafka
         producer.send(args.producer_topic, request, partition=i)
 
+        request_number += 1
+
         message = receive_response(consumer)
         assert message["id"] == i, "Wrong user id"
         
         if message["status"] == "success":
             print(f"Booking success for user {i} with seats {request['seat']}")
-            return i, request['seat']
+            return i, request['seat'], request_number
 
         # Randomly cancel a request
         if random.random() < index * CANCEL_PROB: 
             request["mode"] = "seat_cancel"
 
-        # Send request to Kafka
-        producer.send(args.producer_topic, request, partition=i)
+            # Send request to Kafka
+            producer.send(args.producer_topic, request, partition=i)
 
-        message = receive_response(consumer)
-        assert message["id"] == i, "Wrong user id"
+            request_number += 1
 
-        if message["status"] == "success":
-            print(f"Cancelled booking for user {i}")
-            return i, []
+            message = receive_response(consumer)
+            assert message["id"] == i, "Wrong user id"
+
+            if message["status"] == "success":
+                print(f"Cancelled booking for user {i}")
+                return i, [], request_number
+
+        index += 1
+
+    return 
 
 def main(args):
     
 
-    # Randomly generate 100 requests and send to Kafka through multiple threads
+    # Randomly generate 20 requests and send to Kafka through multiple threads
     workers = multiprocess.cpu_count()
     seat_booking = {}
+    total_requests = 0
+
+    t1 = datetime.now()
     
     with ProcessPoolExecutor(max_workers=workers) as executor:
 
-        for i, seat in executor.map(partial(ticket_booking, args=args), list(range(20))):
+        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(20))):
             if len(seat) > 0:
                 seat_booking[i] = seat
+            total_requests += request_number
+    
+    time_delta = datetime.now() - t1
+    print(f"Time taken: {time_delta.total_second} seconds")
+    print(f"Total requests: {total_requests}")
+    print(f"Average requests per user: {total_requests / time_delta.total_second}")
     
     for user, seats in seat_booking.items():
         print(f"User {user} booked seats {seats}")
