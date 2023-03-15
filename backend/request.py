@@ -16,10 +16,11 @@ CANCEL_PROB = 0.1
 random.seed(1)
 
 def receive_response(consumer):
-    for message in consumer:
-        message = message.value
-        #print(f"Received message: {message}")
-        return message
+    while True:
+        for message in consumer:
+            message = message.value
+            #print(f"Received message: {message}")
+            return message
 
 
 def ticket_booking(i, args):
@@ -28,7 +29,6 @@ def ticket_booking(i, args):
 
     # Create consumer
     consumer = KafkaConsumer(
-        "request",
         bootstrap_servers="localhost:9092", 
         value_deserializer=lambda m: json.loads(m.decode('utf-8')), 
         auto_offset_reset='earliest',
@@ -37,7 +37,7 @@ def ticket_booking(i, args):
     
     # Assign consumer to a partition for each user
     consumer.assign([TopicPartition(args.consumer_topic, i)])
-    
+
     # Randomly generate a request
     seat_number = random.randint(1, 3)
     request = {
@@ -48,6 +48,9 @@ def ticket_booking(i, args):
     }
 
     request_number = 1
+
+    print(f"Requesting {seat_number} seats for user {i}")
+
     # Send request to Kafka
     producer.send(args.producer_topic, request, partition=i)
 
@@ -66,6 +69,8 @@ def ticket_booking(i, args):
         request["seat"] = random.sample(message["available_seats"], seat_number)
         request["mode"] = "seat_confirm"
 
+        print(f"Booking seats {request['seat']} for user {i}")
+
         # Send request to Kafka
         producer.send(args.producer_topic, request, partition=i)
 
@@ -81,6 +86,8 @@ def ticket_booking(i, args):
         # Randomly cancel a request
         if random.random() < index * CANCEL_PROB: 
             request["mode"] = "seat_cancel"
+
+            print(f"Canceling booking for user {i}")
 
             # Send request to Kafka
             producer.send(args.producer_topic, request, partition=i)
@@ -105,24 +112,28 @@ def main(args):
     workers = multiprocess.cpu_count()
     seat_booking = {}
     total_requests = 0
+    total_seats = 0
 
     t1 = datetime.now()
     
-    with ProcessPoolExecutor(max_workers=workers) as executor:
+    with ProcessPoolExecutor(max_workers=4) as executor:
 
-        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(20))):
+        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(14))):
+        #for i, seat, request_number in map(partial(ticket_booking, args=args), list(range(10))):
             if len(seat) > 0:
                 seat_booking[i] = seat
             total_requests += request_number
+            total_seats += len(seat)
     
-    time_delta = datetime.now() - t1
-    print(f"Time taken: {time_delta.total_second} seconds")
+    time_delta = (datetime.now() - t1).total_seconds()
+    print(f"Time taken: {time_delta} seconds")
     print(f"Total requests: {total_requests}")
-    print(f"Average requests per user: {total_requests / time_delta.total_second}")
+    print(f"Average requests per second: {total_requests / time_delta}")
     
     for user, seats in seat_booking.items():
         print(f"User {user} booked seats {seats}")
 
+    print(f"Total seats booked: {total_seats}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
