@@ -24,10 +24,16 @@ def receive_response(consumer):
 
 def ticket_booking(i, args):
     # Create producer
-    producer = KafkaProducer(bootstrap_servers=args.bootstrap_server, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    producer = KafkaProducer(bootstrap_servers="localhost:9092", value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     # Create consumer
-    consumer = KafkaConsumer(bootstrap_servers=args.bootstrap_server, value_deserializer=lambda m: json.loads(m.decode('utf-8')), auto_offset_reset='earliest')
+    consumer = KafkaConsumer(
+        "request",
+        bootstrap_servers="localhost:9092", 
+        value_deserializer=lambda m: json.loads(m.decode('utf-8')), 
+        auto_offset_reset='earliest',
+        max_poll_records=1
+    )
     
     # Assign consumer to a partition for each user
     consumer.assign([TopicPartition(args.consumer_topic, i)])
@@ -36,7 +42,6 @@ def ticket_booking(i, args):
     seat_number = random.randint(1, 3)
     request = {
         "id": i,
-        "movieId": 1,
         "numberTickets": seat_number,
         "seat": [],
         "mode": "seat_request"
@@ -54,7 +59,7 @@ def ticket_booking(i, args):
         print(f"Not enough seats for user {i}")
         return i, [], request_number
      
-    index = 0
+    index = 1
     
     while True:
         # Randomly select seats
