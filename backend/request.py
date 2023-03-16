@@ -7,10 +7,11 @@ from kafka.structs import TopicPartition
 import random
 import argparse
 import json
-import multiprocess
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor
 from datetime import datetime
+from time import sleep
+
 CANCEL_PROB = 0.1
 
 random.seed(1)
@@ -24,20 +25,30 @@ def receive_response(consumer):
 
 
 def ticket_booking(i, args):
-    # Create producer
-    producer = KafkaProducer(bootstrap_servers="localhost:9092", value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    try:
+        # Create producer
+        producer = KafkaProducer(
+            bootstrap_servers="localhost:9092", 
+            value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+            api_version=(2, 0, 1)
+        )
+        
+        # Create consumer
+        consumer = KafkaConsumer(
+            bootstrap_servers="localhost:9092",
+            value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+            auto_offset_reset='earliest',
+            max_poll_records=1
+        )
 
-    # Create consumer
-    consumer = KafkaConsumer(
-        bootstrap_servers="localhost:9092", 
-        value_deserializer=lambda m: json.loads(m.decode('utf-8')), 
-        auto_offset_reset='earliest',
-        max_poll_records=1
-    )
+        # Assign consumer to a partition for each user
+        consumer.assign([TopicPartition(args.consumer_topic, i)])
+
+    except:
+        sleep(1)
+        return ticket_booking(i, args)
     
-    # Assign consumer to a partition for each user
-    consumer.assign([TopicPartition(args.consumer_topic, i)])
-
+    
     # Randomly generate a request
     seat_number = random.randint(1, 3)
     request = {
@@ -107,18 +118,17 @@ def ticket_booking(i, args):
 
 def main(args):
     
-
     # Randomly generate 20 requests and send to Kafka through multiple threads
-    workers = multiprocess.cpu_count()
+    users = 100
     seat_booking = {}
     total_requests = 0
     total_seats = 0
 
     t1 = datetime.now()
     
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=users) as executor:
 
-        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(14))):
+        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(users))):
         #for i, seat, request_number in map(partial(ticket_booking, args=args), list(range(10))):
             if len(seat) > 0:
                 seat_booking[i] = seat
