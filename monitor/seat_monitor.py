@@ -30,15 +30,15 @@ class SeatMonitor(QtWidgets.QWidget):
         self.update_seats()
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self.update_seats)
-        self.timer.start(500)
+        self.timer.start(1000)
 
         self.show()
 
     def update_seats(self):
-
+        seat = self.seats.find()[0]
         for i, seat_box in enumerate(self.seat_boxes):
-            seat = self.seats.find_one({'seat_number': i})
-            if seat['occupied']:
+            ##seat = self.seats.find_one({'seat_number': i})
+            if seat['occupied_' + str(i)]:
                 seat_box.setStyleSheet('background-color: gray')
             else:
                 seat_box.setStyleSheet('background-color: green')
