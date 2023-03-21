@@ -28,14 +28,14 @@ def ticket_booking(i, args):
     try:
         # Create producer
         producer = KafkaProducer(
-            bootstrap_servers="localhost:9092", 
+            bootstrap_servers=args.bootstrap_server, 
             value_serializer=lambda v: json.dumps(v).encode('utf-8'),
             api_version=(2, 0, 1)
         )
         
         # Create consumer
         consumer = KafkaConsumer(
-            bootstrap_servers="localhost:9092",
+            bootstrap_servers=args.bootstrap_server,
             value_deserializer=lambda m: json.loads(m.decode('utf-8')),
             auto_offset_reset='earliest',
             max_poll_records=1
@@ -119,7 +119,7 @@ def ticket_booking(i, args):
 def main(args):
     
     # Randomly generate 20 requests and send to Kafka through multiple threads
-    users = 100
+    users = 32
     seat_booking = {}
     total_requests = 0
     total_seats = 0
@@ -128,7 +128,7 @@ def main(args):
     
     with ProcessPoolExecutor(max_workers=users) as executor:
 
-        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(users))):
+        for i, seat, request_number in executor.map(partial(ticket_booking, args=args), list(range(32, 32+users))):
         #for i, seat, request_number in map(partial(ticket_booking, args=args), list(range(10))):
             if len(seat) > 0:
                 seat_booking[i] = seat
@@ -148,7 +148,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--bootstrap-server", help="Kafka bootstrap server", default="localhost:9092")
-    parser.add_argument("--consumer_topic", help="Kafka consumer topic", default="reponse")
+    parser.add_argument("--consumer_topic", help="Kafka consumer topic", default="response")
     parser.add_argument("--producer_topic", help="Kafka producer topic", default="request")
     args = parser.parse_args()
 
